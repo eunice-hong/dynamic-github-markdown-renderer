@@ -78,7 +78,7 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "package": "tsc -p ./",
-    "test": "tsc -p ./ && node dist/gitConfig.test.js",
+    "test": "tsc -p ./ && node dist/gitConfig.test.js && node media/refLogic.test.js",
     "lint": "eslint src --ext ts",
     "vsce:package": "vsce package",
     "vsce:publish": "vsce publish"

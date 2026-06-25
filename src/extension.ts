@@ -177,6 +177,9 @@ function buildHtml(
   const scriptUri = webview.asWebviewUri(
     vscode.Uri.joinPath(context.extensionUri, 'media', 'preview.js')
   );
+  const logicUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'refLogic.js')
+  );
   const styleUri = webview.asWebviewUri(
     vscode.Uri.joinPath(context.extensionUri, 'media', 'preview.css')
   );
@@ -202,6 +205,7 @@ function buildHtml(
 </head>
 <body>
   <article class="markdown-body" id="content"><p id="loading">Rendering…</p></article>
+  <script src="${logicUri}"></script>
   <script src="${scriptUri}"></script>
 </body>
 </html>`;
