@@ -16,6 +16,10 @@ a `repo#number` suffix, linked back to GitHub. Works in **VS Code** and **Cursor
 - **Full GitHub URLs** (`/issues/N`, `/pull/N`) → resolved title, **including cross-repo**
   references (the URL carries its own owner/repo).
 - **Octicons** distinguish open issue, closed issue, open PR, merged PR, closed PR.
+- **Hovercard**: hover a reference for a github.com-style card — title, state, author
+  (with avatar), assignees, color-coded labels, and milestone.
+- **github.com styling**: the whole document renders with `github-markdown-css`,
+  following the editor's light/dark theme.
 - **Private repos** via `vscode.authentication` — reuses an existing GitHub session, or
   offers an inline “sign in” link on first private-repo miss.
 - **Live**: re-renders as you type. Titles are session-cached to respect the GitHub API
@@ -32,7 +36,7 @@ preview, this extension renders into **its own `WebviewPanel`**:
 | -------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | Extension host | `src/extension.ts`        | Open a `WebviewPanel`, render the doc via the `markdown.api.render` command, push HTML + (optional) GitHub token to the webview. |
 | Extension host | `src/markdownItPlugin.ts` | markdown-it inline rule (run by `markdown.api.render`) wraps each `#123` in `<span class="gh-ref" data-owner/repo/number>`.     |
-| Extension host | `src/gitConfig.ts`        | Parse `.git/config` → `{ owner, repo }` (scp / https / ssh remotes; prefers `origin`). mtime-cached.                            |
+| Extension host | `src/gitConfig.ts`        | Parse `.git/config` → `{ owner, repo }` (scp / https / ssh remotes; prefers `origin`).                                          |
 | Webview        | `media/preview.js`        | Promote GitHub `<a>` URLs into gh-ref spans, fetch titles/state from `api.github.com`, rewrite to `{icon} title repo#number`.   |
 
 `markdown.api.render` **does** run the contributed markdown-it plugin (that is why the
@@ -74,9 +78,7 @@ npm test
 
 ## Roadmap
 
-- **Richer hovercards**: show assignee, labels, and milestone on hover (today the hover
-  shows the title only).
-- **Polishing**: full `github-markdown-css` styling and scroll sync with the source editor.
+- **Scroll sync**: keep the preview's scroll position in sync with the source editor.
 
 ## Known limitations
 
