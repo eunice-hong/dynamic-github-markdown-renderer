@@ -1,0 +1,25 @@
+name: Feature / roadmap item
+description: Propose a feature or enhancement
+labels: [enhancement]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: The change in one or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The problem it solves or the limitation it lifts.
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Cost / trigger / notes
+      description: Rough cost, what should trigger doing it, and files likely touched.
+    validations:
+      required: false
