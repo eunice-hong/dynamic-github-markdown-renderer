@@ -19,7 +19,7 @@
   const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
 
   let githubToken = null;
-  const CACHE_PREFIX = 'gh-ref-meta:';
+  const CACHE_PREFIX = 'gh-ref-meta3:';
 
   // ---- GitHub octicons (16px), colored per state. ----------------------------
   const OCTICON = {
@@ -41,6 +41,9 @@
     // closed (unmerged) PR — red
     prClosed:
       '<svg class="gh-ico" viewBox="0 0 16 16" width="16" height="16" fill="#cf222e"><path d="M3.25 1A2.25 2.25 0 0 1 4 5.372v5.256a2.251 2.251 0 1 1-1.5 0V5.372A2.251 2.251 0 0 1 3.25 1Zm9.5 5.628V5a.75.75 0 0 1 1.5 0v1.628a2.251 2.251 0 1 1-1.5 0ZM2.5 3.25a.75.75 0 1 0 1.5 0 .75.75 0 0 0-1.5 0ZM3.25 12a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm9.5 0a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5Zm-2.72-9.78a.749.749 0 0 1 1.06 0l.97.97.97-.97a.749.749 0 1 1 1.06 1.06l-.97.97.97.97a.749.749 0 1 1-1.06 1.06l-.97-.97-.97.97a.749.749 0 1 1-1.06-1.06l.97-.97-.97-.97a.749.749 0 0 1 0-1.06Z"/></svg>',
+    // GitHub mark — for the hovercard header
+    github:
+      '<svg class="gh-hc-mark" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>',
   };
 
   function pickIcon(data) {
@@ -54,6 +57,53 @@
       return data.state_reason === 'not_planned' ? OCTICON.issueSkipped : OCTICON.issueClosed;
     }
     return OCTICON.issueOpen;
+  }
+
+  // Everything the inline link + hovercard need, in one JSON-serializable object
+  // (so it caches in sessionStorage).
+  function buildMeta(data, title, owner, repo, number) {
+    const merged = !!(data.pull_request && data.pull_request.merged_at);
+    const isPR = !!data.pull_request;
+    const stateText = merged ? 'Merged' : data.state === 'closed' ? 'Closed' : 'Open';
+    const when = merged
+      ? data.pull_request.merged_at
+      : data.state === 'closed'
+        ? data.closed_at || data.created_at
+        : data.created_at;
+    return {
+      title,
+      isPR,
+      icon: pickIcon(data),
+      stateText,
+      when,
+      repoFull: `${owner}/${repo}`,
+      number,
+      author: data.user ? { login: data.user.login, avatar: data.user.avatar_url } : null,
+      labels: (data.labels || []).map((l) => ({ name: l.name, color: l.color })),
+      assignees: (data.assignees || []).map((a) => a.login),
+      milestone: data.milestone && data.milestone.title ? data.milestone.title : null,
+    };
+  }
+
+  // Readable text color over a label's background (YIQ luminance), like github.
+  function labelText(hex) {
+    if (!hex || hex.length < 6) { return '#ffffff'; }
+    const r = parseInt(hex.slice(0, 2), 16);
+    const g = parseInt(hex.slice(2, 4), 16);
+    const b = parseInt(hex.slice(4, 6), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 >= 140 ? '#1f2328' : '#ffffff';
+  }
+
+  // "1 day ago" from an ISO timestamp; coarse units are plenty for a tooltip.
+  function relTime(iso) {
+    if (!iso) { return ''; }
+    const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    const units = [['year', 31536000], ['month', 2592000], ['day', 86400], ['hour', 3600], ['minute', 60]];
+    for (const [name, secs] of units) {
+      const n = Math.floor(s / secs);
+      if (n >= 1) { return `${n} ${name}${n > 1 ? 's' : ''} ago`; }
+    }
+    return 'just now';
   }
 
   // ---- cache ------------------------------------------------------------------
@@ -86,14 +136,117 @@
     const link = document.createElement('a');
     link.href = refUrl(owner, repo, number, meta.isPR);
     link.className = 'gh-ref-link';
-    link.title = meta.title;
     link.innerHTML =
       meta.icon +
       `<span class="gh-ref-title"></span>` +
       `<span class="gh-ref-id"></span>`;
     link.querySelector('.gh-ref-title').textContent = meta.title;
     link.querySelector('.gh-ref-id').textContent = ` ${repo}#${number}`;
+
+    // Rich hovercard (github.com style). Native `title` would not allow the
+    // octicons / avatar, so this is one shared positioned div — no tooltip lib.
+    // The card is non-interactive, so hide directly when the pointer leaves.
+    link.addEventListener('mouseenter', () => showCard(link, meta));
+    link.addEventListener('mouseleave', () => { if (cardEl) { cardEl.hidden = true; } });
     span.appendChild(link);
+  }
+
+  // ---- hovercard --------------------------------------------------------------
+  let cardEl = null;
+
+  function card() {
+    if (!cardEl) {
+      cardEl = document.createElement('div');
+      cardEl.className = 'gh-hovercard';
+      cardEl.hidden = true;
+      document.body.appendChild(cardEl);
+    }
+    return cardEl;
+  }
+
+  // Append a key cell + value cell straight into the 2-column grid so all keys
+  // align in column 1 and all values in column 2.
+  function hcRow(rows, key, valueNode) {
+    const k = document.createElement('span');
+    k.className = 'gh-hc-k';
+    k.textContent = key;
+    const v = document.createElement('span');
+    v.className = 'gh-hc-v';
+    v.appendChild(valueNode);
+    rows.append(k, v);
+  }
+
+  function showCard(link, meta) {
+    const c = card();
+    c.innerHTML = '';
+
+    const head = document.createElement('div');
+    head.className = 'gh-hc-head';
+    head.innerHTML = OCTICON.github;
+    head.appendChild(document.createTextNode(' GitHub'));
+
+    const title = document.createElement('div');
+    title.className = 'gh-hc-title';
+    title.textContent = meta.title;
+
+    const event = meta.stateText === 'Open' ? 'Opened' : meta.stateText;
+    const sub = document.createElement('div');
+    sub.className = 'gh-hc-sub';
+    sub.textContent = `${meta.repoFull} · ${event} ${relTime(meta.when)}`;
+
+    c.append(head, title, sub);
+
+    const rows = document.createElement('div');
+    rows.className = 'gh-hc-rows';
+
+    hcRow(rows, meta.isPR ? 'Pull Request' : 'Issue', document.createTextNode('#' + meta.number));
+
+    const status = document.createElement('span');
+    status.innerHTML = meta.icon; // trusted octicon constant
+    status.appendChild(document.createTextNode(' ' + meta.stateText));
+    hcRow(rows, 'Status', status);
+
+    if (meta.author) {
+      const a = document.createElement('span');
+      const img = document.createElement('img');
+      img.className = 'gh-hc-avatar';
+      img.src = meta.author.avatar;
+      img.referrerPolicy = 'no-referrer';
+      a.append(img, document.createTextNode(' ' + meta.author.login));
+      hcRow(rows, 'Author', a);
+    }
+    if ((meta.assignees || []).length) {
+      hcRow(rows, 'Assignee', document.createTextNode(meta.assignees.join(', ')));
+    }
+    if ((meta.labels || []).length) {
+      const wrap = document.createElement('span');
+      wrap.className = 'gh-hc-labels';
+      meta.labels.forEach((l) => {
+        const chip = document.createElement('span');
+        chip.className = 'gh-hc-label';
+        chip.style.backgroundColor = '#' + (l.color || '888888');
+        chip.style.color = labelText(l.color);
+        chip.textContent = l.name;
+        wrap.appendChild(chip);
+      });
+      hcRow(rows, 'Labels', wrap);
+    }
+    if (meta.milestone) {
+      hcRow(rows, 'Milestone', document.createTextNode(meta.milestone));
+    }
+
+    c.appendChild(rows);
+
+    // Position below the link, flipping above / clamping to the viewport.
+    c.hidden = false;
+    const r = link.getBoundingClientRect();
+    let top = r.bottom + 8;
+    if (top + c.offsetHeight > window.innerHeight - 8) {
+      top = Math.max(8, r.top - c.offsetHeight - 8);
+    }
+    const left = Math.min(r.left, window.innerWidth - c.offsetWidth - 12);
+    c.style.top = top + 'px';
+    c.style.left = Math.max(8, left) + 'px';
   }
 
   function markError(span, reason, signInHint) {
@@ -153,7 +306,7 @@
       const title = typeof data.title === 'string' ? data.title : null;
       if (!title) { markError(span, 'No title in API response'); return; }
 
-      const meta = { title, isPR: !!data.pull_request, icon: pickIcon(data) };
+      const meta = buildMeta(data, title, owner, repo, number);
       writeCache(owner, repo, number, meta);
       span.dataset.ghState = 'done';
       applyMeta(span, meta);

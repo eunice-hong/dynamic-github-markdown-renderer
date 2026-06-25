@@ -36,3 +36,71 @@
   text-decoration: underline dotted;
   cursor: pointer;
 }
+
+/* ---- hovercard (github.com style) ---- */
+.gh-hovercard {
+  position: fixed;
+  z-index: 1000;
+  width: 360px;
+  max-width: 90vw;
+  padding: 14px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--vscode-foreground, #1f2328);
+  background: var(--vscode-editorHoverWidget-background, #ffffff);
+  border: 1px solid var(--vscode-editorHoverWidget-border, rgba(128,128,128,0.35));
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.gh-hc-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--vscode-descriptionForeground, #6e7781);
+  margin-bottom: 8px;
+}
+.gh-hc-mark { vertical-align: text-bottom; }
+
+.gh-hc-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.gh-hc-sub {
+  font-size: 13px;
+  color: var(--vscode-descriptionForeground, #6e7781);
+  margin-bottom: 10px;
+}
+
+.gh-hc-rows {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  row-gap: 8px;
+  column-gap: 12px;
+  align-items: start;
+}
+.gh-hc-k { color: var(--vscode-descriptionForeground, #6e7781); }
+.gh-hc-v { display: inline-flex; align-items: center; gap: 5px; min-width: 0; word-break: break-word; }
+
+.gh-hc-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.gh-hc-labels {
+  flex-wrap: wrap;
+}
+.gh-hc-label {
+  padding: 0 9px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 500;
+  white-space: nowrap;
+}
