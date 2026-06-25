@@ -3,6 +3,7 @@ src/**
 tsconfig.json
 .vscode/**
 .github/**
+.claude/**
 .gitignore
 .git/**
 
