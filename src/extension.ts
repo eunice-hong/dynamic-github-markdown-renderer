@@ -15,6 +15,10 @@ function refreshRepo(): void {
 // One preview panel per source document, keyed by document URI.
 const panels = new Map<string, vscode.WebviewPanel>();
 
+// Persistent title cache (key `owner/repo#number` → meta), survives sessions.
+// ponytail: unbounded; add an LRU cap if it ever bloats (titles are tiny strings).
+const CACHE_KEY = 'gh-ref-cache';
+
 export function activate(context: vscode.ExtensionContext) {
   refreshRepo();
   context.subscriptions.push(
@@ -107,6 +111,12 @@ function openPreview(context: vscode.ExtensionContext, doc: vscode.TextDocument)
     }
   }
 
+  // Seed the webview with the persistent cache before it renders/resolves.
+  panel.webview.postMessage({
+    type: 'cacheSeed',
+    cache: context.globalState.get<Record<string, unknown>>(CACHE_KEY, {}),
+  });
+
   // Token first so the very first fetch can already see private repos.
   void postToken(false).then(render);
 
@@ -119,6 +129,12 @@ function openPreview(context: vscode.ExtensionContext, doc: vscode.TextDocument)
     if (msg?.type === 'requestSignIn') {
       await postToken(true);
       render();
+      return;
+    }
+    if (msg?.type === 'cachePut' && typeof msg.key === 'string') {
+      const cache = context.globalState.get<Record<string, unknown>>(CACHE_KEY, {});
+      cache[msg.key] = msg.meta;
+      void context.globalState.update(CACHE_KEY, cache);
       return;
     }
     if (msg?.type === 'previewScrolled') {

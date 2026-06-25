@@ -11,7 +11,8 @@
  *
  *      linked to the issue/PR — matching how references render on github.com.
  *
- * Titles are cached in sessionStorage so re-renders on keystroke are instant.
+ * Titles are cached in the host's globalState (seeded into an in-memory mirror)
+ * so re-renders on keystroke are instant and titles persist across sessions.
  */
 (function () {
   'use strict';
@@ -19,7 +20,6 @@
   const vscodeApi = typeof acquireVsCodeApi === 'function' ? acquireVsCodeApi() : null;
 
   let githubToken = null;
-  const CACHE_PREFIX = 'gh-ref-meta3:';
 
   // ---- GitHub octicons (16px), colored per state. ----------------------------
   const OCTICON = {
@@ -60,7 +60,7 @@
   }
 
   // Everything the inline link + hovercard need, in one JSON-serializable object
-  // (so it caches in sessionStorage).
+  // (so it serializes into the persistent cache).
   function buildMeta(data, title, owner, repo, number) {
     const merged = !!(data.pull_request && data.pull_request.merged_at);
     const isPR = !!data.pull_request;
@@ -107,18 +107,21 @@
   }
 
   // ---- cache ------------------------------------------------------------------
+  // In-memory mirror of the host's persistent cache. Seeded by the host on load
+  // (message 'cacheSeed') and written through to the host (message 'cachePut'),
+  // which persists it in globalState so titles survive across windows/sessions.
+  let memCache = {};
+
   function cacheKey(owner, repo, number) {
-    return `${CACHE_PREFIX}${owner}/${repo}#${number}`;
+    return `${owner}/${repo}#${number}`;
   }
   function readCache(owner, repo, number) {
-    try {
-      const raw = window.sessionStorage.getItem(cacheKey(owner, repo, number));
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
+    return memCache[cacheKey(owner, repo, number)] || null;
   }
   function writeCache(owner, repo, number, meta) {
-    try { window.sessionStorage.setItem(cacheKey(owner, repo, number), JSON.stringify(meta)); }
-    catch { /* ignore */ }
+    const key = cacheKey(owner, repo, number);
+    memCache[key] = meta;
+    if (vscodeApi) { vscodeApi.postMessage({ type: 'cachePut', key, meta }); }
   }
 
   function refUrl(owner, repo, number, isPR) {
@@ -397,12 +400,20 @@
       return;
     }
 
+    if (msg.type === 'cacheSeed') {
+      // Arrives before the first 'update'; that message resolves spans against
+      // this seeded cache, so no resolveAll() is needed here.
+      memCache = msg.cache || {};
+      return;
+    }
+
     if (msg.type === 'token') {
       githubToken = msg.token;
-      // Re-resolve everything now that we can see private repos.
-      try { window.sessionStorage.clear(); } catch { /* ignore */ }
-      document.querySelectorAll('span.gh-ref').forEach((s) => {
+      // Retry only the refs that failed (private 404s); errors are never cached,
+      // so successful titles stay put.
+      document.querySelectorAll('span.gh-ref[data-gh-state="error"]').forEach((s) => {
         delete s.dataset.ghState;
+        s.classList.remove('gh-ref--error');
       });
       resolveAll();
       return;
