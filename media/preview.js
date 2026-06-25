@@ -348,10 +348,54 @@
     );
   }
 
+  // ---- two-way scroll sync ----------------------------------------------------
+  // The rendered HTML carries `data-line="N"` on each block (added by
+  // markdown.api.render), giving a source-line ↔ element map for free.
+  // `programmaticScrollAt` suppresses the scroll event our own scrollToLine
+  // causes, so the editor→preview→editor loop can't run away.
+  let programmaticScrollAt = 0;
+
+  function scrollToLine(line) {
+    let target = null;
+    for (const n of document.querySelectorAll('#content [data-line]')) {
+      if (+n.dataset.line <= line) { target = n; } else { break; }
+    }
+    if (target) {
+      programmaticScrollAt = Date.now();
+      window.scrollTo(0, target.offsetTop - 8);
+    }
+  }
+
+  function topVisibleLine() {
+    let line = 0;
+    for (const n of document.querySelectorAll('#content [data-line]')) {
+      if (n.getBoundingClientRect().top > 0) { break; }
+      line = +n.dataset.line;
+    }
+    return line;
+  }
+
+  let scrollQueued = false;
+  window.addEventListener('scroll', () => {
+    if (!vscodeApi) { return; }
+    if (Date.now() - programmaticScrollAt < 250) { return; } // our own scroll
+    if (scrollQueued) { return; }
+    scrollQueued = true;
+    requestAnimationFrame(() => {
+      scrollQueued = false;
+      vscodeApi.postMessage({ type: 'previewScrolled', line: topVisibleLine() });
+    });
+  });
+
   // ---- host messages ----------------------------------------------------------
   window.addEventListener('message', function (event) {
     const msg = event.data;
     if (!msg) { return; }
+
+    if (msg.type === 'scroll') {
+      scrollToLine(msg.line | 0);
+      return;
+    }
 
     if (msg.type === 'token') {
       githubToken = msg.token;

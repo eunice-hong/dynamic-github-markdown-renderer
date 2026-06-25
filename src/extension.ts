@@ -110,11 +110,35 @@ function openPreview(context: vscode.ExtensionContext, doc: vscode.TextDocument)
   // Token first so the very first fetch can already see private repos.
   void postToken(false).then(render);
 
+  // ---- two-way scroll sync ----------------------------------------------------
+  // Each side ignores the scroll event caused by the *other* side's programmatic
+  // move, using a short timestamp window — that breaks the feedback loop.
+  let editorRevealedAt = 0;
+
   panel.webview.onDidReceiveMessage(async (msg) => {
     if (msg?.type === 'requestSignIn') {
       await postToken(true);
       render();
+      return;
     }
+    if (msg?.type === 'previewScrolled') {
+      const ed = vscode.window.visibleTextEditors.find((e) => e.document === doc);
+      if (ed) {
+        editorRevealedAt = Date.now();
+        const line = Math.min(Math.max(0, msg.line | 0), doc.lineCount - 1);
+        ed.revealRange(
+          new vscode.Range(line, 0, line, 0),
+          vscode.TextEditorRevealType.AtTop
+        );
+      }
+    }
+  });
+
+  const onVisible = vscode.window.onDidChangeTextEditorVisibleRanges((e) => {
+    if (e.textEditor.document !== doc) { return; }
+    if (Date.now() - editorRevealedAt < 250) { return; } // our own reveal
+    const line = e.visibleRanges[0]?.start.line ?? 0;
+    panel.webview.postMessage({ type: 'scroll', line });
   });
 
   const onChange = vscode.workspace.onDidChangeTextDocument((e) => {
@@ -125,6 +149,7 @@ function openPreview(context: vscode.ExtensionContext, doc: vscode.TextDocument)
 
   panel.onDidDispose(() => {
     onChange.dispose();
+    onVisible.dispose();
     panels.delete(key);
   });
 }

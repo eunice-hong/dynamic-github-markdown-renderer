@@ -22,6 +22,7 @@ a `repo#number` suffix, linked back to GitHub. Works in **VS Code** and **Cursor
   following the editor's light/dark theme.
 - **Private repos** via `vscode.authentication` — reuses an existing GitHub session, or
   offers an inline “sign in” link on first private-repo miss.
+- **Two-way scroll sync**: the preview and the source editor follow each other's scroll.
 - **Live**: re-renders as you type. Titles are session-cached to respect the GitHub API
   rate limit.
 
@@ -76,13 +77,7 @@ then follow the Usage steps above.
 npm test
 ```
 
-## Roadmap
-
-- **Scroll sync**: keep the preview's scroll position in sync with the source editor.
-
 ## Known limitations
 
-- **Separate panel**: this is a custom preview, not the built-in one, so it does not share
-  the built-in preview's scroll-sync or some theme integrations.
 - Unauthenticated GitHub API is rate-limited to 60 requests/hour per IP; resolved titles
   are session-cached to stay well under it.
