@@ -139,6 +139,9 @@ function buildHtml(
   const styleUri = webview.asWebviewUri(
     vscode.Uri.joinPath(context.extensionUri, 'media', 'preview.css')
   );
+  const githubCssUri = webview.asWebviewUri(
+    vscode.Uri.joinPath(context.extensionUri, 'media', 'github-markdown.css')
+  );
   const csp = webview.cspSource;
 
   return `<!DOCTYPE html>
@@ -147,24 +150,17 @@ function buildHtml(
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; img-src ${csp} https: data:; style-src ${csp} 'unsafe-inline'; script-src ${csp}; connect-src https://api.github.com;">
+  <link rel="stylesheet" href="${githubCssUri}">
   <link rel="stylesheet" href="${styleUri}">
   <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 20px 28px; line-height: 1.6; max-width: 860px; }
-    h1, h2, h3, h4 { font-weight: 600; margin-top: 1.5em; }
-    code { font-family: 'SF Mono', Consolas, monospace; font-size: 0.875em; background: rgba(128,128,128,0.15); padding: 1px 5px; border-radius: 3px; }
-    pre { background: rgba(128,128,128,0.12); padding: 12px 16px; border-radius: 6px; overflow-x: auto; }
-    pre code { background: none; padding: 0; font-size: 0.875em; }
-    blockquote { border-left: 4px solid rgba(128,128,128,0.35); margin: 0; padding-left: 16px; color: rgba(128,128,128,0.9); }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid rgba(128,128,128,0.3); padding: 6px 12px; }
-    th { background: rgba(128,128,128,0.1); }
-    hr { border: none; border-top: 1px solid rgba(128,128,128,0.3); margin: 24px 0; }
-    img { max-width: 100%; }
+    /* github-markdown-css scopes everything under .markdown-body; this wrapper
+       just centers it and adds page padding (per the library's README). */
+    .markdown-body { box-sizing: border-box; max-width: 980px; margin: 0 auto; padding: 24px 32px; }
     #loading { color: gray; font-family: monospace; font-size: 13px; }
   </style>
 </head>
 <body>
-  <div id="content"><p id="loading">Rendering…</p></div>
+  <article class="markdown-body" id="content"><p id="loading">Rendering…</p></article>
   <script src="${scriptUri}"></script>
 </body>
 </html>`;
