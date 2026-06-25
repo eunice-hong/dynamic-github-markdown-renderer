@@ -1,0 +1,15 @@
+# Source — only the compiled dist/ ships.
+src/**
+tsconfig.json
+.vscode/**
+.github/**
+.gitignore
+.git/**
+
+# Dev-only artifacts
+**/*.map
+**/*.test.js
+media/icon.svg
+node_modules/**
+
+# Keep: dist/, media/*.js, media/*.css, media/icon.png, README, LICENSE

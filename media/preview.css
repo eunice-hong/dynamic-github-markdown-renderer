@@ -1,0 +1,38 @@
+/* Styling for #123 references in the gh-ref WebviewPanel preview. */
+
+.gh-ref--loading {
+  opacity: 0.6;
+}
+.gh-ref--loading::after {
+  content: ' …';
+}
+
+.gh-ref-link {
+  text-decoration: none;
+  color: var(--vscode-textLink-foreground, #0969da);
+  white-space: normal;
+}
+.gh-ref-link:hover .gh-ref-title {
+  text-decoration: underline;
+}
+
+.gh-ico {
+  vertical-align: text-bottom;
+  margin-right: 3px;
+}
+
+.gh-ref-id {
+  color: var(--vscode-descriptionForeground, #6e7781);
+  font-variant-numeric: tabular-nums;
+}
+
+.gh-ref--error {
+  border-bottom: 1px dotted var(--vscode-editorWarning-foreground, #bf8700);
+  cursor: help;
+}
+
+.gh-ref-signin {
+  color: var(--vscode-textLink-foreground, #0969da);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}

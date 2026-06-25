@@ -1,0 +1,93 @@
+{
+  "name": "github-issue-title-renderer",
+  "displayName": "GitHub Issue/PR Title Renderer",
+  "description": "Render #123 issue/PR references in the VS Code markdown preview as their real GitHub titles, just like github.com.",
+  "version": "0.0.1",
+  "publisher": "eunice-hong",
+  "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eunice-hong/dynamic-github-markdown-renderer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/eunice-hong/dynamic-github-markdown-renderer/issues"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "github",
+    "markdown",
+    "preview",
+    "issue",
+    "pull request"
+  ],
+  "activationEvents": [
+    "onLanguage:markdown"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "gh-ref.openPreview",
+        "title": "Open GitHub Preview",
+        "category": "GitHub Ref",
+        "icon": "$(github)"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "gh-ref.openPreview",
+          "when": "editorLangId == markdown"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "gh-ref.openPreview",
+          "when": "editorLangId == markdown",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "gh-ref.openPreview",
+          "when": "editorLangId == markdown",
+          "group": "navigation"
+        }
+      ]
+    },
+    "markdown.markdownItPlugins": true,
+    "configuration": {
+      "title": "GitHub Issue/PR Title Renderer",
+      "properties": {
+        "githubIssueTitleRenderer.autoOpenPreview": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically open the GitHub preview when a markdown file is opened."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "tsc -p ./",
+    "test": "tsc -p ./ && node dist/gitConfig.test.js",
+    "lint": "eslint src --ext ts",
+    "vsce:package": "vsce package",
+    "vsce:publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.x",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.0.0",
+    "ovsx": "^0.10.0",
+    "typescript": "^5.4.0"
+  }
+}
