@@ -1,6 +1,8 @@
 type RepoGetter = () => { owner: string; repo: string } | undefined;
 
 export function ghRefPlugin(md: any, getRepo: RepoGetter = () => undefined): void {
+  const esc = md.utils.escapeHtml;
+
   md.inline.ruler.push('gh_ref', (state: any, silent: boolean) =>
     ghRefRule(state, silent, getRepo)
   );
@@ -11,22 +13,13 @@ export function ghRefPlugin(md: any, getRepo: RepoGetter = () => undefined): voi
     const owner = token.attrGet('data-owner');
     const repo = token.attrGet('data-repo');
 
-    let attrs = `class="gh-ref" data-number="${escapeHtml(number)}"`;
+    let attrs = `class="gh-ref" data-number="${esc(number)}"`;
     if (owner && repo) {
-      attrs += ` data-owner="${escapeHtml(owner)}" data-repo="${escapeHtml(repo)}"`;
+      attrs += ` data-owner="${esc(owner)}" data-repo="${esc(repo)}"`;
     }
     return `<span ${attrs}>`;
   };
   md.renderer.rules.gh_ref_close = () => '</span>';
-}
-
-function escapeHtml(value: string | null): string {
-  if (!value) { return ''; }
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 function ghRefRule(state: any, silent: boolean, getRepo: RepoGetter): boolean {
@@ -62,11 +55,7 @@ function ghRefRule(state: any, silent: boolean, getRepo: RepoGetter): boolean {
   return true;
 }
 
+// \w == [A-Za-z0-9_]; NaN (out-of-range index) → '\0', which is not a word char.
 function isWordChar(code: number): boolean {
-  return (
-    (code >= 0x30 && code <= 0x39) ||
-    (code >= 0x41 && code <= 0x5a) ||
-    (code >= 0x61 && code <= 0x7a) ||
-    code === 0x5f
-  );
+  return /\w/.test(String.fromCharCode(code));
 }

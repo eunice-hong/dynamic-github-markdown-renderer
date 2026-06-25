@@ -6,17 +6,10 @@ export interface RepoInfo {
   repo: string;
 }
 
-interface CacheEntry {
-  mtimeMs: number;
-  info: RepoInfo | undefined;
-}
-
-const cache = new Map<string, CacheEntry>();
-
 /**
  * Reads `<root>/.git/config` and extracts `{ owner, repo }` from the first GitHub
- * remote it finds (preferring `origin`). Result is cached and invalidated by the
- * config file's mtime so an opened preview reflects remote changes without a reload.
+ * remote it finds (preferring `origin`). Called only on activation and workspace
+ * folder change, so it just reads each time — no cache needed.
  *
  * Supported remote URL shapes:
  *   - git@github.com:owner/repo.git
@@ -29,31 +22,12 @@ export function getRepoInfo(root: string | undefined): RepoInfo | undefined {
     return undefined;
   }
 
-  const configPath = path.join(root, '.git', 'config');
-
-  let mtimeMs: number;
   try {
-    mtimeMs = fs.statSync(configPath).mtimeMs;
+    const raw = fs.readFileSync(path.join(root, '.git', 'config'), 'utf8');
+    return parseRepoFromGitConfig(raw);
   } catch {
-    cache.delete(configPath);
     return undefined;
   }
-
-  const cached = cache.get(configPath);
-  if (cached && cached.mtimeMs === mtimeMs) {
-    return cached.info;
-  }
-
-  let info: RepoInfo | undefined;
-  try {
-    const raw = fs.readFileSync(configPath, 'utf8');
-    info = parseRepoFromGitConfig(raw);
-  } catch {
-    info = undefined;
-  }
-
-  cache.set(configPath, { mtimeMs, info });
-  return info;
 }
 
 /**
