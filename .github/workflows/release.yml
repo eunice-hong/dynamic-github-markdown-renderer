@@ -41,9 +41,12 @@ jobs:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
       # Open VSX powers Cursor / VSCodium. Skips automatically if no token is set.
+      # create-namespace is first-publish-only; `|| true` makes reruns idempotent.
       - name: Publish to Open VSX
         if: ${{ env.OVSX_PAT != '' }}
-        run: npx ovsx publish github-issue-title-renderer.vsix -p "$OVSX_PAT"
+        run: |
+          npx ovsx create-namespace eunice-hong -p "$OVSX_PAT" || true
+          npx ovsx publish github-issue-title-renderer.vsix -p "$OVSX_PAT"
 
       - name: GitHub Release
         uses: softprops/action-gh-release@v2
