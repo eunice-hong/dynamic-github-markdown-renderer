@@ -130,24 +130,42 @@
     link.querySelector('.gh-ref-id').textContent = ` ${repo}#${number}`;
 
     // Rich hovercard (github.com style). Native `title` would not allow the
-    // octicons / avatar, so this is one shared positioned div — no tooltip lib.
-    // The card is non-interactive, so hide directly when the pointer leaves.
+    // octicons / avatar / links, so this is one shared positioned div — no tooltip lib.
+    // The card is interactive (clickable links), so a short grace delay lets the
+    // pointer travel from the reference onto the card without it closing.
     link.addEventListener('mouseenter', () => showCard(link, meta));
-    link.addEventListener('mouseleave', () => { if (cardEl) { cardEl.hidden = true; } });
+    link.addEventListener('mouseleave', scheduleHide);
     span.appendChild(link);
   }
 
   // ---- hovercard --------------------------------------------------------------
   let cardEl = null;
+  let hideTimer = null;
+
+  function scheduleHide() {
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => { if (cardEl) { cardEl.hidden = true; } }, 200);
+  }
 
   function card() {
     if (!cardEl) {
       cardEl = document.createElement('div');
       cardEl.className = 'gh-hovercard';
       cardEl.hidden = true;
+      // Keep the card open while the pointer is over it (so links are clickable).
+      cardEl.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+      cardEl.addEventListener('mouseleave', scheduleHide);
       document.body.appendChild(cardEl);
     }
     return cardEl;
+  }
+
+  // An <a> with class + href set; the caller fills in the content.
+  function hcLink(cls, href) {
+    const a = document.createElement('a');
+    a.className = cls;
+    a.href = href;
+    return a;
   }
 
   // Append a key cell + value cell straight into the 2-column grid so all keys
@@ -163,29 +181,36 @@
   }
 
   function showCard(link, meta) {
+    clearTimeout(hideTimer); // re-showing: cancel any pending hide
     const c = card();
     c.innerHTML = '';
+
+    const issueUrl = `https://github.com/${meta.repoFull}/${meta.isPR ? 'pull' : 'issues'}/${meta.number}`;
+    const repoUrl = `https://github.com/${meta.repoFull}`;
 
     const head = document.createElement('div');
     head.className = 'gh-hc-head';
     head.innerHTML = OCTICON.github;
     head.appendChild(document.createTextNode(' GitHub'));
 
-    const title = document.createElement('div');
-    title.className = 'gh-hc-title';
+    const title = hcLink('gh-hc-title', issueUrl);
     title.textContent = meta.title;
 
     const event = meta.stateText === 'Open' ? 'Opened' : meta.stateText;
     const sub = document.createElement('div');
     sub.className = 'gh-hc-sub';
-    sub.textContent = `${meta.repoFull} · ${event} ${relTime(meta.when)}`;
+    const repoLink = hcLink('gh-hc-link', repoUrl);
+    repoLink.textContent = meta.repoFull;
+    sub.append(repoLink, document.createTextNode(` · ${event} ${relTime(meta.when)}`));
 
     c.append(head, title, sub);
 
     const rows = document.createElement('div');
     rows.className = 'gh-hc-rows';
 
-    hcRow(rows, meta.isPR ? 'Pull Request' : 'Issue', document.createTextNode('#' + meta.number));
+    const numLink = hcLink('gh-hc-link', issueUrl);
+    numLink.textContent = '#' + meta.number;
+    hcRow(rows, meta.isPR ? 'Pull Request' : 'Issue', numLink);
 
     const status = document.createElement('span');
     status.innerHTML = meta.icon; // trusted octicon constant
@@ -193,7 +218,7 @@
     hcRow(rows, 'Status', status);
 
     if (meta.author) {
-      const a = document.createElement('span');
+      const a = hcLink('gh-hc-link', `https://github.com/${meta.author.login}`);
       const img = document.createElement('img');
       img.className = 'gh-hc-avatar';
       img.src = meta.author.avatar;
