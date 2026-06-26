@@ -2,7 +2,7 @@
   "name": "github-issue-title-renderer",
   "displayName": "GitHub Issue/PR Title Renderer",
   "description": "Render #123 issue/PR references in the VS Code markdown preview as their real GitHub titles, just like github.com.",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "publisher": "eunice-hong",
   "license": "MIT",
   "icon": "media/icon.png",
